@@ -7,18 +7,18 @@ public class CatTest {
 
 	@Dog
 	public static void main(String[] args) {
-		method1();
-		foo();
+		new CatTest().foo();
+		
 	}
 	
 	@Cat
-	public static int method1() {
+	public int method1() {
 		int i = 1;
 		return i;
 	}
 	
-	@Dog
-	public static int foo() {
+	@Dog(breed="Pug")
+	public int foo() {
 		int j = 2;
 		return j;
 	}
