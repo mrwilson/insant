@@ -69,6 +69,9 @@ public class Insant implements ClassFileTransformer {
 			if (m.name.startsWith("<")) // We don't want <init>, <clinit> etc.
 				continue;
 
+			if (null == m.visibleAnnotations)
+				continue;
+
 			for (final AnnotationNode n : new ArrayList<AnnotationNode>(m.visibleAnnotations)) {
 
 
