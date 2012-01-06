@@ -15,12 +15,10 @@ import java.util.ArrayList;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.LocalVariableNode;
 import org.objectweb.asm.tree.MethodInsnNode;
@@ -51,12 +49,13 @@ public class Insant implements ClassFileTransformer {
 			Class<?> classBeingRedefined, ProtectionDomain protectionDomain,
 			byte[] classfileBuffer) throws IllegalClassFormatException {
 
+	/*	
 		//We don't want generated classes
 		if (!className.contains("probablyfine") || className.contains("$")) {
 
 			return classfileBuffer;
 		}
-
+	 */
 		return fiddle(classfileBuffer);
 
 	}
@@ -75,7 +74,7 @@ public class Insant implements ClassFileTransformer {
 			if (m.name.startsWith("<")) // We don't want <init>, <clinit> etc.
 				continue;
 
-			if (null == m.visibleAnnotations)
+			if (null == m.visibleAnnotations) // Ignore methods with no annotations
 				continue;
 
 			for (final AnnotationNode n : new ArrayList<AnnotationNode>(m.visibleAnnotations)) {
@@ -84,7 +83,6 @@ public class Insant implements ClassFileTransformer {
 				String annName = n.desc.substring(1,n.desc.length()-1).replaceAll("/", ".");
 
 				if (annName.matches(MethodAccess.class.getName())) {
-					System.out.println("dog> "+m.name);
 
 					//This is our list of instructions that we're going to insert
 					InsnList list = new InsnList();
@@ -93,7 +91,7 @@ public class Insant implements ClassFileTransformer {
 					list.add(new FieldInsnNode(Opcodes.GETSTATIC, "Ljava/lang/System;", "out", "Ljava/io/PrintStream;"));
 
 					//This is the message we want to write
-					list.add(new LdcInsnNode("Woof! I'm a dog!"));
+					list.add(new LdcInsnNode("Entering "+m.name));
 
 					//This calls the println of the Field we got with the argument we made
 					list.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream" , "println", "(Ljava/lang/Object;)V"));
@@ -106,23 +104,18 @@ public class Insant implements ClassFileTransformer {
 				} 
 				
 				if (annName.matches(LocalVars.class.getName())) {
-					System.out.println("cat> "+m.name);
 
 					for (LocalVariableNode l : new ArrayList<LocalVariableNode>(m.localVariables)) {
-						//This is our list of instructions that we're going to insert
+						
 						InsnList list = new InsnList();
 						
-						System.out.println(l.name+" "+l.index);
-						
 						if (0 == l.index) {
-							//System.out.println("Not using this");
 							continue;				
 						}
 						
 						//We want System.out, which is a java.io.PrintStream
 						list.add(new FieldInsnNode(Opcodes.GETSTATIC, "Ljava/lang/System;", "out", "Ljava/io/PrintStream;"));
 
-						//System.out.println("loading "+l.name);
 						//This is the message we want to write
 						list.add(new VarInsnNode(Opcodes.ALOAD, l.index));
 						
@@ -131,7 +124,7 @@ public class Insant implements ClassFileTransformer {
 						
 						//We need to fiddle the stack size to account for more instructions.
 						m.maxStack += 2;
-
+						
 						m.instructions.insertBefore(m.instructions.getLast().getPrevious(),list);
 						
 	
