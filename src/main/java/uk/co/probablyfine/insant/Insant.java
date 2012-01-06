@@ -27,8 +27,8 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
-import uk.co.probablyfine.insant.annotations.Cat;
-import uk.co.probablyfine.insant.annotations.Dog;
+import uk.co.probablyfine.insant.annotations.LocalVars;
+import uk.co.probablyfine.insant.annotations.MethodAccess;
 
 import com.google.common.io.Files;
 
@@ -83,7 +83,7 @@ public class Insant implements ClassFileTransformer {
 				//Name of the annotation
 				String annName = n.desc.substring(1,n.desc.length()-1).replaceAll("/", ".");
 
-				if (annName.matches(Dog.class.getName())) {
+				if (annName.matches(MethodAccess.class.getName())) {
 					System.out.println("dog> "+m.name);
 
 					//This is our list of instructions that we're going to insert
@@ -105,7 +105,7 @@ public class Insant implements ClassFileTransformer {
 					m.instructions.insert(list);
 				} 
 				
-				if (annName.matches(Cat.class.getName())) {
+				if (annName.matches(LocalVars.class.getName())) {
 					System.out.println("cat> "+m.name);
 
 					for (LocalVariableNode l : new ArrayList<LocalVariableNode>(m.localVariables)) {
@@ -124,7 +124,7 @@ public class Insant implements ClassFileTransformer {
 
 						//System.out.println("loading "+l.name);
 						//This is the message we want to write
-						list.add(new VarInsnNode(Opcodes.ILOAD, l.index));
+						list.add(new VarInsnNode(Opcodes.ALOAD, l.index));
 						
 						//This calls the println of the Field we got with the argument we made
 						list.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream" , "println", "("+l.desc+")V"));

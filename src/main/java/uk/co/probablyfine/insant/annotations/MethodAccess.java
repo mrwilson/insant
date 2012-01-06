@@ -7,6 +7,6 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
-public @interface Dog {
+public @interface MethodAccess {
 	String breed() default "Golden Retriever";
 }
