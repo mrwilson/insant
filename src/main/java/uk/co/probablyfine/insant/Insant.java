@@ -2,7 +2,9 @@ package uk.co.probablyfine.insant;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
@@ -13,13 +15,17 @@ import java.util.ArrayList;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.LdcInsnNode;
+import org.objectweb.asm.tree.LocalVariableNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.VarInsnNode;
 
 import uk.co.probablyfine.insant.annotations.Cat;
 import uk.co.probablyfine.insant.annotations.Dog;
@@ -29,10 +35,13 @@ import com.google.common.io.Files;
 public class Insant implements ClassFileTransformer {
 
 	public static void main(final String[] args) throws FileNotFoundException, IOException {
-		for (final String filename : args)
-			fiddle(Files.toByteArray(new File(filename)));
+		for (final String filename : args) {
+			OutputStream f = new FileOutputStream("CatTest.class");
+			f.write(fiddle(Files.toByteArray(new File(filename))));
+			f.flush();
+			f.close();
+		}
 	}
-
 
 	public static void premain(String agentArguments, Instrumentation instrumentation) throws UnmodifiableClassException {
 		instrumentation.addTransformer(new Insant());
@@ -61,9 +70,6 @@ public class Insant implements ClassFileTransformer {
 
 		new ClassReader(classfileBuffer).accept(cn, 0);
 
-		System.out.println("------");
-		System.out.println(cn.name);
-
 		for (final MethodNode m : new ArrayList<MethodNode>(cn.methods)) {
 
 			if (m.name.startsWith("<")) // We don't want <init>, <clinit> etc.
@@ -73,8 +79,6 @@ public class Insant implements ClassFileTransformer {
 				continue;
 
 			for (final AnnotationNode n : new ArrayList<AnnotationNode>(m.visibleAnnotations)) {
-
-
 
 				//Name of the annotation
 				String annName = n.desc.substring(1,n.desc.length()-1).replaceAll("/", ".");
@@ -94,20 +98,50 @@ public class Insant implements ClassFileTransformer {
 					//This calls the println of the Field we got with the argument we made
 					list.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream" , "println", "(Ljava/lang/Object;)V"));
 
-					//We need to fiddle the stack size. WHYYYYYYYYY
+					//We need to fiddle the stack size to account for more instructions.
 					m.maxStack += 2;
 
 					//Insert that!
 					m.instructions.insert(list);
-				} else if (annName.matches(Cat.class.getName())) {
+				} 
+				
+				if (annName.matches(Cat.class.getName())) {
 					System.out.println("cat> "+m.name);
-				} else {
-					System.out.println("bad> "+m.name);
-				}
+
+					for (LocalVariableNode l : new ArrayList<LocalVariableNode>(m.localVariables)) {
+						//This is our list of instructions that we're going to insert
+						InsnList list = new InsnList();
+						
+						System.out.println(l.name+" "+l.index);
+						
+						if (0 == l.index) {
+							//System.out.println("Not using this");
+							continue;				
+						}
+						
+						//We want System.out, which is a java.io.PrintStream
+						list.add(new FieldInsnNode(Opcodes.GETSTATIC, "Ljava/lang/System;", "out", "Ljava/io/PrintStream;"));
+
+						//System.out.println("loading "+l.name);
+						//This is the message we want to write
+						list.add(new VarInsnNode(Opcodes.ILOAD, l.index));
+						
+						//This calls the println of the Field we got with the argument we made
+						list.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream" , "println", "("+l.desc+")V"));
+						
+						//We need to fiddle the stack size to account for more instructions.
+						m.maxStack += 2;
+
+						m.instructions.insertBefore(m.instructions.getLast().getPrevious(),list);
+						
+	
+						
+					}
+					
+					
+				} 
 			}
 		}
-
-		System.out.println("------");
 
 		final ClassWriter cw = new ClassWriter(0);
 		cn.accept(cw);

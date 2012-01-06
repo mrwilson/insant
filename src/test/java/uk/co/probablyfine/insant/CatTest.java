@@ -7,19 +7,19 @@ public class CatTest {
 
 	public static void main(String[] args) {
 		new CatTest().foo();
-
+		new CatTest().bar();
 	}
 
 	@Cat
-	public int method1() {
+	public void bar() {
+		//System.out.println("Calling bar");
 		int i = 1;
-		return i;
+		System.out.println(i);
 	}
 
-	@Dog(breed="Pug")
-	public int foo() {
-		int j = 2;
-		return j;
+	@Dog
+	public void foo() {
+		System.out.println("Calling foo");
 	}
 
 }

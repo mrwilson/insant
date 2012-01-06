@@ -23,7 +23,12 @@
 					<descriptorRefs>
 						<descriptorRef>jar-with-dependencies</descriptorRef>
 					</descriptorRefs>
+					
+					
 					<archive>
+						<manifest>
+							<mainClass>uk.co.probablyfine.insant.Insant</mainClass>
+						</manifest>
 						<manifestEntries>
 							<Premain-Class>uk.co.probablyfine.insant.Insant</Premain-Class>
 						</manifestEntries>
