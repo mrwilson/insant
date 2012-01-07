@@ -9,8 +9,13 @@ public class LocalVarsTest {
 	}
 
 	@LocalVars
-	private void foo() {
+	@SuppressWarnings("unused")
+	public void foo() {
+		System.out.println("Entering foo");
 		String foo = "foo";
+		int bar = 1;
+		double baz = 2;
+		
 	}
 	
 }

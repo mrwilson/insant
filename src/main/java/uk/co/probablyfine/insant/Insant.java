@@ -2,9 +2,7 @@ package uk.co.probablyfine.insant;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
@@ -34,15 +32,13 @@ public class Insant implements ClassFileTransformer {
 
 	public static void main(final String[] args) throws FileNotFoundException, IOException {
 		for (final String filename : args) {
-			
-			System.out.println(filename);
+
 			File file = new File(filename);
+
 			byte[] newClass = fiddle(Files.toByteArray(new File(filename)));
 			
-			OutputStream f = new FileOutputStream(file, false);
-			f.write(newClass);
-			f.flush();
-			f.close();
+			Files.write(newClass, file);
+		
 		}
 	}
 
@@ -54,13 +50,6 @@ public class Insant implements ClassFileTransformer {
 			Class<?> classBeingRedefined, ProtectionDomain protectionDomain,
 			byte[] classfileBuffer) throws IllegalClassFormatException {
 
-	/*	
-		//We don't want generated classes
-		if (!className.contains("probablyfine") || className.contains("$")) {
-
-			return classfileBuffer;
-		}
-	 */
 		return fiddle(classfileBuffer);
 
 	}
@@ -120,7 +109,7 @@ public class Insant implements ClassFileTransformer {
 
 		list.add(new LdcInsnNode("Entering "+node.name));
 
-		list.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream" , "println", "(Ljava/lang/Object;)V"));
+		list.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream" , "println", "(Ljava/lang/String;)V"));
 
 		return list;
 		
@@ -139,8 +128,17 @@ public class Insant implements ClassFileTransformer {
 			
 			list.add(new FieldInsnNode(Opcodes.GETSTATIC, "Ljava/lang/System;", "out", "Ljava/io/PrintStream;"));
 			
-			//TODO: OH DEAR SO MUCH TO DO HERE D:
-			list.add(new VarInsnNode(Opcodes.ALOAD, l.index));
+			if (l.desc.matches("I")) {
+				list.add(new VarInsnNode(Opcodes.ILOAD, l.index));
+			} else if (l.desc.matches("D")) {
+				list.add(new VarInsnNode(Opcodes.DLOAD, l.index));
+			} else if (l.desc.matches("F")) {
+				list.add(new VarInsnNode(Opcodes.FLOAD, l.index));
+			} else if (l.desc.matches("L")) {
+				list.add(new VarInsnNode(Opcodes.LLOAD, l.index));
+			} else {
+				list.add(new VarInsnNode(Opcodes.ALOAD, l.index));
+			}
 			
 			list.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream" , "println", "("+l.desc+")V"));
 			
