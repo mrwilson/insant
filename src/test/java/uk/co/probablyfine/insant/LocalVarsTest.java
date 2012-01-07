@@ -9,7 +9,6 @@ public class LocalVarsTest {
 	}
 
 	@LocalVars
-	@SuppressWarnings("unused")
 	private void foo() {
 		String foo = "foo";
 	}

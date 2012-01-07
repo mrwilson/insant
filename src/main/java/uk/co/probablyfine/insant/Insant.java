@@ -34,8 +34,13 @@ public class Insant implements ClassFileTransformer {
 
 	public static void main(final String[] args) throws FileNotFoundException, IOException {
 		for (final String filename : args) {
-			OutputStream f = new FileOutputStream("CatTest.class");
-			f.write(fiddle(Files.toByteArray(new File(filename))));
+			
+			System.out.println(filename);
+			File file = new File(filename);
+			byte[] newClass = fiddle(Files.toByteArray(new File(filename)));
+			
+			OutputStream f = new FileOutputStream(file, false);
+			f.write(newClass);
 			f.flush();
 			f.close();
 		}
@@ -83,53 +88,19 @@ public class Insant implements ClassFileTransformer {
 				String annName = n.desc.substring(1,n.desc.length()-1).replaceAll("/", ".");
 
 				if (annName.matches(MethodAccess.class.getName())) {
-
-					//This is our list of instructions that we're going to insert
-					InsnList list = new InsnList();
-
-					//We want System.out, which is a java.io.PrintStream
-					list.add(new FieldInsnNode(Opcodes.GETSTATIC, "Ljava/lang/System;", "out", "Ljava/io/PrintStream;"));
-
-					//This is the message we want to write
-					list.add(new LdcInsnNode("Entering "+m.name));
-
-					//This calls the println of the Field we got with the argument we made
-					list.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream" , "println", "(Ljava/lang/Object;)V"));
-
+					
 					//We need to fiddle the stack size to account for more instructions.
 					m.maxStack += 2;
 
 					//Insert that!
-					m.instructions.insert(list);
+					m.instructions.insert(methodAccess(m));
 				} 
 				
 				if (annName.matches(LocalVars.class.getName())) {
-
-					for (LocalVariableNode l : new ArrayList<LocalVariableNode>(m.localVariables)) {
-						
-						InsnList list = new InsnList();
-						
-						if (0 == l.index) {
-							continue;				
-						}
-						
-						//We want System.out, which is a java.io.PrintStream
-						list.add(new FieldInsnNode(Opcodes.GETSTATIC, "Ljava/lang/System;", "out", "Ljava/io/PrintStream;"));
-
-						//This is the message we want to write
-						list.add(new VarInsnNode(Opcodes.ALOAD, l.index));
-						
-						//This calls the println of the Field we got with the argument we made
-						list.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream" , "println", "("+l.desc+")V"));
-						
-						//We need to fiddle the stack size to account for more instructions.
-						m.maxStack += 2;
-						
-						m.instructions.insertBefore(m.instructions.getLast().getPrevious(),list);
-						
-	
-						
-					}
+					
+					m.maxStack += 2;
+					
+					m.instructions.insertBefore(m.instructions.getLast().getPrevious(), localVar(m));
 					
 					
 				} 
@@ -140,4 +111,43 @@ public class Insant implements ClassFileTransformer {
 		cn.accept(cw);
 		return cw.toByteArray();
 	}
+	
+	private static InsnList methodAccess(MethodNode node) {
+
+		InsnList list = new InsnList();
+
+		list.add(new FieldInsnNode(Opcodes.GETSTATIC, "Ljava/lang/System;", "out", "Ljava/io/PrintStream;"));
+
+		list.add(new LdcInsnNode("Entering "+node.name));
+
+		list.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream" , "println", "(Ljava/lang/Object;)V"));
+
+		return list;
+		
+	}
+
+	@SuppressWarnings("unchecked")
+	private static InsnList localVar(MethodNode node) {
+		
+		InsnList list = new InsnList();
+		
+		for (LocalVariableNode l : new ArrayList<LocalVariableNode>(node.localVariables)) {
+			
+			if (0 == l.index) {
+				continue;				
+			}
+			
+			list.add(new FieldInsnNode(Opcodes.GETSTATIC, "Ljava/lang/System;", "out", "Ljava/io/PrintStream;"));
+			
+			//TODO: OH DEAR SO MUCH TO DO HERE D:
+			list.add(new VarInsnNode(Opcodes.ALOAD, l.index));
+			
+			list.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream" , "println", "("+l.desc+")V"));
+			
+		}
+	
+		return list;
+		
+	}
+
 }
