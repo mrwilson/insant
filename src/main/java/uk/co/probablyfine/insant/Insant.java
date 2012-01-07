@@ -9,10 +9,12 @@ import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
+import java.util.ListIterator;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
@@ -26,6 +28,8 @@ import org.objectweb.asm.tree.VarInsnNode;
 import uk.co.probablyfine.insant.annotations.LocalVars;
 import uk.co.probablyfine.insant.annotations.MethodAccess;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import com.google.common.io.Files;
 
 public class Insant implements ClassFileTransformer {
@@ -89,10 +93,18 @@ public class Insant implements ClassFileTransformer {
 					
 					m.maxStack += 2;
 					
-					m.instructions.insertBefore(m.instructions.getLast().getPrevious(), localVar(m));
-					
-					
-				} 
+					InsnList newInstructions = localVar(m);
+				
+					ListIterator<AbstractInsnNode> it = m.instructions.iterator();
+
+					while (it.hasNext()) {
+						AbstractInsnNode node = it.next();
+						int opcode = node.getOpcode();
+						if ((opcode >= Opcodes.IRETURN && opcode <= Opcodes.RETURN) || opcode == Opcodes.ATHROW) {
+							m.instructions.insertBefore(node.getPrevious(), newInstructions);
+						}
+					}
+				}
 			}
 		}
 

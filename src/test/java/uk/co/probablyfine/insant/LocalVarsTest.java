@@ -14,8 +14,7 @@ public class LocalVarsTest {
 		System.out.println("Entering foo");
 		String foo = "foo";
 		int bar = 1;
-		double baz = 2;
-		
+		double baz = 2;		
 	}
 	
 }
