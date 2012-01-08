@@ -28,8 +28,6 @@ import org.objectweb.asm.tree.VarInsnNode;
 import uk.co.probablyfine.insant.annotations.LocalVars;
 import uk.co.probablyfine.insant.annotations.MethodAccess;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
 import com.google.common.io.Files;
 
 public class Insant implements ClassFileTransformer {
@@ -67,6 +65,7 @@ public class Insant implements ClassFileTransformer {
 
 		new ClassReader(classfileBuffer).accept(cn, 0);
 
+		
 		for (final MethodNode m : new ArrayList<MethodNode>(cn.methods)) {
 
 			if (m.name.startsWith("<")) // We don't want <init>, <clinit> etc.
@@ -92,15 +91,16 @@ public class Insant implements ClassFileTransformer {
 				if (annName.matches(LocalVars.class.getName())) {
 					
 					m.maxStack += 2;
-					
-					InsnList newInstructions = localVar(m);
-				
+									
 					ListIterator<AbstractInsnNode> it = m.instructions.iterator();
 
 					while (it.hasNext()) {
 						AbstractInsnNode node = it.next();
 						int opcode = node.getOpcode();
+						
 						if ((opcode >= Opcodes.IRETURN && opcode <= Opcodes.RETURN) || opcode == Opcodes.ATHROW) {
+							InsnList newInstructions = localVar(m, m.instructions.indexOf(node), m.instructions);
+							
 							m.instructions.insertBefore(node.getPrevious(), newInstructions);
 						}
 					}
@@ -128,7 +128,7 @@ public class Insant implements ClassFileTransformer {
 	}
 
 	@SuppressWarnings("unchecked")
-	private static InsnList localVar(MethodNode node) {
+	private static InsnList localVar(MethodNode node, int line, InsnList insnlist) {
 		
 		InsnList list = new InsnList();
 		
@@ -136,6 +136,10 @@ public class Insant implements ClassFileTransformer {
 			
 			if (0 == l.index) {
 				continue;				
+			}
+			
+			if (insnlist.indexOf(l.start) > line) {
+				continue;
 			}
 			
 			list.add(new FieldInsnNode(Opcodes.GETSTATIC, "Ljava/lang/System;", "out", "Ljava/io/PrintStream;"));
